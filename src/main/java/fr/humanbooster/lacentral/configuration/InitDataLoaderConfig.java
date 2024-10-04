@@ -4,9 +4,7 @@ import fr.humanbooster.lacentral.entity.*;
 import fr.humanbooster.lacentral.entity.embededid.UserListingId;
 import fr.humanbooster.lacentral.repository.*;
 import lombok.AllArgsConstructor;
-import lombok.NoArgsConstructor;
 import net.datafaker.Faker;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -41,64 +39,47 @@ public class InitDataLoaderConfig implements CommandLineRunner {
             return;
         }
 
-        List<User> users = new ArrayList<>();
-        for (int i = 0; i < 100; i++) {
-            User user = new User();
-            user.setEmail(faker.internet().emailAddress());
-            user.setFirstName(faker.name().firstName());
-            user.setLastName(faker.name().lastName());
-            user.setPassword(passwordEncoder.encode("12345"));
-            user.setPhone(faker.phoneNumber().cellPhone());
-            user.setBirthAt(generateRandomDate(
-                    Instant.now().minusSeconds(999999999)
-                            .minusSeconds(999999999)
-                            .minusSeconds(999999999)).toLocalDate());
-            user.setCreatedAt(LocalDateTime.now());
-            user.setRoles("ROLE_USER");
-            user = userRepository.save(user);
-            users.add(user);
+        List<User> users = getUsers();
 
-            Address address = new Address();
-            address.setStreetNumber(faker.address().buildingNumber());
-            address.setStreetName(faker.address().streetName());
-            address.setZipCode(faker.address().zipCode());
-            address.setCity(faker.address().city());
-            address.setLongitude(Float.parseFloat(faker.address().longitude().replace(",", ".")));
-            address.setLatitude(Float.parseFloat(faker.address().latitude().replace(",", ".")));
-            address.setUser_uuid(user);
-            addressRepository.save(address);
-        }
+        List<Brand> brands = getBrandList();
 
-        List<Brand> brands = new ArrayList<>();
-        for (int i = 0; i < 10; i++) {
-            Brand brand = new Brand();
-            brand.setName(faker.company().name());
-            brand = brandRepository.save(brand);
-            brands.add(brand);
-        }
+        List<Model> models = getModels(brands, random);
 
-        List<Model> models = new ArrayList<>();
-        for (int i = 0; i < 50; i++) {
-            Model model = new Model();
-            model.setName(faker.bothify("Model ???"));
-            Brand brand = brands.get(random.nextInt(brands.size()));
-            model.setBrand(brand);
-            model = modelRepository.save(model);
-            models.add(model);
-        }
-
-        List<Fuel> fuels = new ArrayList<>();
-        String[] fuelTypes = {"Gasoline", "Diesel", "Electric", "Hybrid", "Hydrogen"};
-        for (String fuelType : fuelTypes) {
-            Fuel fuel = new Fuel();
-            fuel.setType(fuelType);
-            fuel.setLogo(fuelType.toLowerCase() + "_logo.png");
-            fuel = fuelRepository.save(fuel);
-            fuels.add(fuel);
-        }
+        List<Fuel> fuels = getFuels();
 
         List<Address> addresses = addressRepository.findAll();
 
+        List<Listing> listings = getListings(models, random, fuels, addresses, users);
+
+
+        extracted(users, random, listings);
+
+        System.out.println("Fake data generation fini.");
+    }
+
+    private void extracted(List<User> users, Random random, List<Listing> listings) {
+        Set<String> favoriteKeys = new HashSet<>();
+        for (int i = 0; i < 2000; i++) {
+            User user = users.get(random.nextInt(users.size()));
+            Listing listing = listings.get(random.nextInt(listings.size()));
+            String key = user.getUuid() + "-" + listing.getUuid();
+
+            if (!favoriteKeys.contains(key)) {
+                Favorite favorite = new Favorite();
+                UserListingId id = new UserListingId();
+                id.setUser_uuid(user.getUuid());
+                id.setListing_uuid(listing.getUuid());
+                favorite.setId(id);
+                favorite.setCreatedAt(LocalDateTime.now());
+                favorite.setUser(user);
+                favorite.setListing(listing);
+                favoriteRepository.save(favorite);
+                favoriteKeys.add(key);
+            }
+        }
+    }
+
+    private List<Listing> getListings(List<Model> models, Random random, List<Fuel> fuels, List<Address> addresses, List<User> users) {
         List<Listing> listings = new ArrayList<>();
 
         for (int i = 0; i < 500; i++) {
@@ -127,29 +108,80 @@ public class InitDataLoaderConfig implements CommandLineRunner {
                 imageRepository.save(image);
             }
         }
+        return listings;
+    }
 
-
-        Set<String> favoriteKeys = new HashSet<>();
-        for (int i = 0; i < 2000; i++) {
-            User user = users.get(random.nextInt(users.size()));
-            Listing listing = listings.get(random.nextInt(listings.size()));
-            String key = user.getUuid() + "-" + listing.getUuid();
-
-            if (!favoriteKeys.contains(key)) {
-                Favorite favorite = new Favorite();
-                UserListingId id = new UserListingId();
-                id.setUser_uuid(user.getUuid());
-                id.setListing_uuid(listing.getUuid());
-                favorite.setId(id);
-                favorite.setCreatedAt(LocalDateTime.now());
-                favorite.setUser(user);
-                favorite.setListing(listing);
-                favoriteRepository.save(favorite);
-                favoriteKeys.add(key);
-            }
+    private List<Fuel> getFuels() {
+        List<Fuel> fuels = new ArrayList<>();
+        String[] fuelTypes = {"Gasoline", "Diesel", "Electric", "Hybrid", "Hydrogen"};
+        for (String fuelType : fuelTypes) {
+            Fuel fuel = new Fuel();
+            fuel.setType(fuelType);
+            fuel.setLogo(fuelType.toLowerCase() + "_logo.png");
+            fuel = fuelRepository.save(fuel);
+            fuels.add(fuel);
         }
+        return fuels;
+    }
 
-        System.out.println("Fake data generation fini.");
+    private List<Model> getModels(List<Brand> brands, Random random) {
+        List<Model> models = new ArrayList<>();
+        for (int i = 0; i < 50; i++) {
+            Model model = new Model();
+            model.setName(faker.bothify("Model ???"));
+            Brand brand = brands.get(random.nextInt(brands.size()));
+            model.setBrand(brand);
+            model = modelRepository.save(model);
+            models.add(model);
+        }
+        return models;
+    }
+
+    private List<Brand> getBrandList() {
+        List<Brand> brands = new ArrayList<>();
+        for (int i = 0; i < 10; i++) {
+            Brand brand = new Brand();
+            brand.setName(faker.company().name());
+            brand = brandRepository.save(brand);
+            brands.add(brand);
+        }
+        return brands;
+    }
+
+    private List<User> getUsers() {
+        List<User> users = new ArrayList<>();
+        for (int i = 0; i < 100; i++) {
+            User user = new User();
+            user.setEmail(faker.internet().emailAddress());
+            user.setFirstName(faker.name().firstName());
+            user.setLastName(faker.name().lastName());
+            user.setPassword(passwordEncoder.encode("12345"));
+            user.setPhone(faker.phoneNumber().cellPhone());
+            user.setBirthAt(generateRandomDate(
+                    Instant.now().minusSeconds(999999999)
+                            .minusSeconds(999999999)
+                            .minusSeconds(999999999)).toLocalDate());
+            user.setCreatedAt(LocalDateTime.now());
+            String roles = "[\"ROLE_USER\"";
+            if (i == 1L) {
+                roles += ", \"ROLE_ADMIN\"";
+            }
+            roles += "]";
+            user.setRoles(roles);
+            user = userRepository.save(user);
+            users.add(user);
+
+            Address address = new Address();
+            address.setStreetNumber(faker.address().buildingNumber());
+            address.setStreetName(faker.address().streetName());
+            address.setZipCode(faker.address().zipCode());
+            address.setCity(faker.address().city());
+            address.setLongitude(Float.parseFloat(faker.address().longitude().replace(",", ".")));
+            address.setLatitude(Float.parseFloat(faker.address().latitude().replace(",", ".")));
+            address.setUser_uuid(user);
+            addressRepository.save(address);
+        }
+        return users;
     }
 
     private LocalDateTime generateRandomDate(Instant start) {

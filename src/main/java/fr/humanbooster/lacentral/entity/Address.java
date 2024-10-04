@@ -1,6 +1,8 @@
 package fr.humanbooster.lacentral.entity;
 
 import com.fasterxml.jackson.annotation.JsonView;
+import fr.humanbooster.lacentral.jsonviews.AddressJsonview;
+import fr.humanbooster.lacentral.jsonviews.FuelJsonview;
 import fr.humanbooster.lacentral.jsonviews.ListingJsonview;
 import fr.humanbooster.lacentral.jsonviews.UserJsonview;
 import jakarta.persistence.*;
@@ -22,32 +24,32 @@ public class Address {
 
     @NotBlank
     @Column(nullable = false)
-    @JsonView({ListingJsonview.listingShowView.class, UserJsonview.userShowView.class})
+    @JsonView({ListingJsonview.listingShowView.class, UserJsonview.userShowView.class, AddressJsonview.addressShowView.class})
     private String streetNumber;
 
     @NotBlank
     @Column(nullable = false)
-    @JsonView({ListingJsonview.listingShowView.class, UserJsonview.userShowView.class})
+    @JsonView({ListingJsonview.listingShowView.class, UserJsonview.userShowView.class, AddressJsonview.addressShowView.class})
     private String streetName;
 
     @NotBlank
     @Column(nullable = false)
-    @JsonView({ListingJsonview.listingShowView.class, UserJsonview.userShowView.class})
+    @JsonView({ListingJsonview.listingShowView.class, UserJsonview.userShowView.class, AddressJsonview.addressCommonView.class})
     private String zipCode;
 
     @NotBlank
     @Column(nullable = false)
-    @JsonView({ListingJsonview.listingShowView.class, UserJsonview.userShowView.class})
+    @JsonView({ListingJsonview.listingShowView.class, UserJsonview.userShowView.class, AddressJsonview.addressCommonView.class})
     private String city;
 
     @NotNull
     @Column(nullable = false)
-    @JsonView({ListingJsonview.listingShowView.class, UserJsonview.userShowView.class})
+    @JsonView({ListingJsonview.listingShowView.class, UserJsonview.userShowView.class, AddressJsonview.addressShowView.class})
     private Float longitude;
 
     @NotNull
     @Column(nullable = false)
-    @JsonView({ListingJsonview.listingShowView.class, UserJsonview.userShowView.class})
+    @JsonView({ListingJsonview.listingShowView.class, UserJsonview.userShowView.class, AddressJsonview.addressShowView.class})
     private Float latitude;
 
     @OneToOne

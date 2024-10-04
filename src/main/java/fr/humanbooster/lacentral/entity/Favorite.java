@@ -28,6 +28,7 @@ public class Favorite {
 
     @ManyToOne
     @JoinColumn(nullable = false, name = "user_uuid", updatable = false, insertable = false)
+    @JsonView({UserJsonview.userShowView.class, FavoriteJsonview.favoriteShowView.class})
     private User user;
 
     @ManyToOne

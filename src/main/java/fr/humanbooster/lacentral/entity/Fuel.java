@@ -1,6 +1,7 @@
 package fr.humanbooster.lacentral.entity;
 
 import com.fasterxml.jackson.annotation.JsonView;
+import fr.humanbooster.lacentral.jsonviews.FuelJsonview;
 import fr.humanbooster.lacentral.jsonviews.ListingJsonview;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
@@ -21,10 +22,11 @@ public class Fuel {
 
     @NotBlank
     @Column(nullable = false)
-    @JsonView(ListingJsonview.listingShowView.class)
+    @JsonView({ListingJsonview.listingShowView.class, FuelJsonview.fuelListViewSimple.class})
     private String type;
 
     @NotBlank
     @Column(nullable = false)
+    @JsonView(FuelJsonview.fuelShowView.class)
     private String logo;
 }

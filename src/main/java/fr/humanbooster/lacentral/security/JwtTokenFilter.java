@@ -5,6 +5,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -22,18 +23,26 @@ public class JwtTokenFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
     private final UserService userService;
 
+
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
-            throws ServletException, IOException {
+    protected void doFilterInternal(
+            HttpServletRequest request,
+            @NotNull HttpServletResponse response,
+            @NotNull FilterChain filterChain
+    ) throws ServletException, IOException {
         String authorizedHeader = request.getHeader("Authorization");
         String token;
         String username;
-        if (authorizedHeader != null && authorizedHeader.startsWith("Bearer ")) {
+
+        if (authorizedHeader != null
+                && authorizedHeader.startsWith("Bearer ")
+                && authorizedHeader.length() > 7
+        ) {
             token = authorizedHeader.substring(7);
             username = jwtService.extractUserName(token);
-
             UserDetails userDetails = userService.loadUserByUsername(username);
-            if (jwtService.validateToken(token, userDetails)){
+
+            if (jwtService.validateToken(token, userDetails)) {
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                         userDetails, null, userDetails.getAuthorities()
                 );
@@ -44,6 +53,4 @@ public class JwtTokenFilter extends OncePerRequestFilter {
         }
         filterChain.doFilter(request, response);
     }
-
-
 }

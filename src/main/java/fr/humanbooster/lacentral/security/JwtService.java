@@ -12,15 +12,12 @@ import javax.crypto.SecretKey;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.function.Function;
 
 @Component
 public class JwtService {
 
     private final String secretKey;
-
 
     public JwtService() {
         try {
@@ -32,17 +29,29 @@ public class JwtService {
         }
     }
 
-public String generateToken(String username) {
-    Map<String, Object> claims = new HashMap<>();
-    return Jwts.builder()
-            .claims()
-            .add(claims)
-            .subject(username)
-            .issuedAt(new Date(System.currentTimeMillis()))
-            .expiration(new Date(System.currentTimeMillis() + 60 * 60 * 1000))
-            .and()
-            .signWith(getKey())
-            .compact();
+    public String generateToken(String username) {
+        // If ya want to add more claims to this token
+        // There you add to the "claims" Map
+//        Map<String, Object> claims = new HashMap<>();
+        return Jwts.builder()
+                .claims()
+//                .add(claims)
+                .subject(username)
+                .issuer("botteprintemps")
+                .issuedAt(new Date(System.currentTimeMillis()))
+                .expiration(new Date(System.currentTimeMillis() + 60 * 60 * 1000)) // Update the time limit
+                .and() // add more infos to the token ?
+                .signWith(getKey())
+                .compact();
+    }
+
+    public String extractUserName(String token) {
+        return extractClaim(token, Claims::getSubject);
+    }
+
+    public boolean validateToken(String token, UserDetails userDetails) {
+        final String userName = extractUserName(token);
+        return (userName.equals(userDetails.getUsername()) && !isTokenExpired(token));
     }
 
     private SecretKey getKey() {
@@ -50,33 +59,25 @@ public String generateToken(String username) {
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
-    public String extractUserName(String token) {
-        return extractClaim(token, Claims::getSubject);
+    private Date extractExpiration(String token) {
+        return extractClaim(token, Claims::getExpiration);
     }
 
-    public Boolean validateToken(String token, UserDetails userDetails) {
-        final String username = extractUserName(token);
-        return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
+    private boolean isTokenExpired(String token) {
+        return extractExpiration(token).before(new Date());
     }
 
-    private Claims extractAllClaim(String token) {
-        return Jwts
-                .parser()
+    private Claims extractAllClaims(String token) {
+        return Jwts.parser()
                 .verifyWith(getKey())
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
     }
 
-    private <T> T extractClaim(String token, Function<Claims, T> claimsResolver ) {
-        final Claims claims = extractAllClaim(token);
-        return claimsResolver.apply(claims);
+    private <T> T extractClaim(String token, Function<Claims, T> claimResolver) {
+        final Claims claims = extractAllClaims(token);
+        return claimResolver.apply(claims);
     }
 
-    private Date extractExpiration(String token) {
-        return extractClaim(token, Claims::getExpiration);
-    }
-    private boolean isTokenExpired(String token) {
-        return extractExpiration(token).before(new Date());
-    }
 }

@@ -27,11 +27,6 @@ public class UserController {
         return userService.findById(id);
     }
 
-    @PostMapping
-    public User create(@Valid @RequestBody UserDto userDto) {
-        return userService.create(userDto);
-    }
-
     @GetMapping("/activate/{code}")
     @JsonView(UserJsonview.userShowView.class)
     public User activate(@PathVariable String code) {

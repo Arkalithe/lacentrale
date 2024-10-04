@@ -1,5 +1,6 @@
 package fr.humanbooster.lacentral.service;
 
+import fr.humanbooster.lacentral.dto.UserRegisterDto;
 import fr.humanbooster.lacentral.dto.UserUpdateDto;
 import fr.humanbooster.lacentral.entity.Address;
 import fr.humanbooster.lacentral.exception.AlreadyActiveException;
@@ -13,6 +14,7 @@ import lombok.AllArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -25,14 +27,17 @@ import java.util.concurrent.TimeoutException;
 
 @Service
 @AllArgsConstructor
-public class UserService implements ServiceInterface<User, String, UserDto, UserUpdateDto> {
+public class UserService implements ServiceInterface<User, String, UserRegisterDto, UserUpdateDto>, UserDetailsService {
 
     private final UserRepository userRepository;
     private final AddressRepository addressRepository;
     private final BCryptPasswordEncoder bCryptPasswordEncoder;
 
     @Override
-    public User create(UserDto userDto) {
+    public User create(UserRegisterDto userDto) {
+        User user = new User();
+        user.setPassword(bCryptPasswordEncoder.encode(userDto.getPassword()));
+        user.setEmail(userDto.getEmail());
         return userRepository.saveAndFlush(objectCreateFromDto(new User(), userDto));
     }
 
@@ -72,16 +77,16 @@ public class UserService implements ServiceInterface<User, String, UserDto, User
         return userRepository.findById(id).orElseThrow(EntityNotFoundException::new);
     }
 
-    private User objectCreateFromDto(User user, UserDto userDto) {
+    private User objectCreateFromDto(User user, UserRegisterDto userDto) {
         user.setEmail(userDto.getEmail());
+        user.setPassword(bCryptPasswordEncoder.encode(userDto.getPassword()));
         user.setFirstName(userDto.getFirstName());
         user.setLastName(userDto.getLastName());
         user.setActivationCode(UUID.randomUUID().toString());
-        user.setPassword(bCryptPasswordEncoder.encode(userDto.getPassword()));
         user.setPhone(userDto.getPhone());
         user.setCreatedAt(LocalDateTime.now());
-        user.setRoles(userDto.getRole());
         user.setBirthAt(userDto.getBirthAt());
+        user.setRoles("[\"ROLE_USER\"]");
         // Send Mail ? mailerService.setActivationCodeSentAt(user)
          user.setActivationCodeSentAt(LocalDateTime.now());
         return user;
@@ -101,7 +106,7 @@ public class UserService implements ServiceInterface<User, String, UserDto, User
     public User activate(String code){
         User user = userRepository.findUserByActivationCode(code).orElseThrow(() -> new AlreadyActiveException("Ce code d'activation n'existe pas !"));
         LocalDateTime current = LocalDateTime.now();
-        if (current.isAfter(user.getActivationCodeSentAt().plusMinutes(1))) {
+        if (current.isAfter(user.getActivationCodeSentAt().plusMinutes(10))) {
             throw new ExpiredCodeException("La durée du code a expiré");
         }
         user.setActivationCode(null);
@@ -109,21 +114,27 @@ public class UserService implements ServiceInterface<User, String, UserDto, User
         return  userRepository.saveAndFlush(user);
     }
 
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        User user = userRepository.findByEmail(username)
-                .orElseThrow(() -> new UsernameNotFoundException("Fire in the hole"));
 
+    @Override
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        User user = userRepository.findByEmailAndActivationCodeIsNull(username)
+                .orElseThrow(() -> new UsernameNotFoundException("Fire in the hole"));
         return new org.springframework.security.core.userdetails.User(
                 user.getEmail(),
                 user.getPassword(),
-                userGrantedAuthority(user.getRole())
+                user.getAuthorities()
+
         );
+
     }
 
-    private Collection<? extends GrantedAuthority> userGrantedAuthority(String jsonRole) {
-        List<GrantedAuthority> authorities = new ArrayList<>();
-        List<String> roles = Collections.singletonList(jsonRole);
-        roles.forEach(r -> authorities.add(new SimpleGrantedAuthority(r)));
-        return authorities;
-    }
+
+//    private Collection<? extends GrantedAuthority> userGrantedAuthority(String jsonRole) {
+//        List<GrantedAuthority> authorities = new ArrayList<>();
+//        List<String> roles = Collections.singletonList(jsonRole);
+//        roles.forEach(r -> authorities.add(new SimpleGrantedAuthority( r == null ? "toto" : r )));
+//        return authorities;
+//    }
+
+
 }

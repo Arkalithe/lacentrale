@@ -10,7 +10,9 @@ import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 import lombok.Data;
+import org.json.JSONArray;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.LocalDate;
@@ -40,8 +42,6 @@ public class User implements UserDetails {
 
     @JsonView(UserJsonview.userShowView.class)
     private String lastName;
-
-    private String role;
 
     @NotBlank
     @Column(nullable = false)
@@ -89,18 +89,19 @@ public class User implements UserDetails {
     private List<Favorite> favorite = new ArrayList<>();
 
     @JsonView(UserJsonview.userShowView.class)
-    private Boolean isActive() {
+    private boolean isActive() {
         return this.activationCode == null;
     }
 
-    @JsonView(UserJsonview.userShowView.class)
-    private Boolean getIsAdmin() {
-        return roles.contains("ROLE_ADMIN");
-    }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of();
+        List<GrantedAuthority> authorities = new ArrayList<>();
+        JSONArray roles = new JSONArray(this.roles);
+        roles.forEach(role -> {
+            authorities.add(new SimpleGrantedAuthority(role.toString()));
+        });
+        return authorities;
     }
 
     @Override

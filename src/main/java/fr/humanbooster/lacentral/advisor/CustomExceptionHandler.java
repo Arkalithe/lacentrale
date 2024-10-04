@@ -1,8 +1,7 @@
 package fr.humanbooster.lacentral.advisor;
 
 import fr.humanbooster.lacentral.custom_response.CustomResponse;
-import fr.humanbooster.lacentral.exception.AlreadyActiveException;
-import fr.humanbooster.lacentral.exception.ExpiredCodeException;
+import fr.humanbooster.lacentral.exception.CustomEntityNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -13,13 +12,15 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 public class CustomExceptionHandler {
 
     @ResponseBody
-    @ExceptionHandler(RuntimeException.class)
+    @ExceptionHandler(CustomEntityNotFoundException.class)
     @ResponseStatus(HttpStatus.BAD_GATEWAY)
-    public CustomResponse handler(RuntimeException ex) {
-      if (ex instanceof  AlreadyActiveException || ex instanceof ExpiredCodeException) {
-          return new CustomResponse(HttpStatus.BAD_GATEWAY.value(), ex.getMessage());
-      }
-      return new CustomResponse();
+    CustomResponse entityNotFoundHandler(CustomEntityNotFoundException exception) {
+        CustomResponse response = new CustomResponse();
+        response.setStatus(HttpStatus.BAD_GATEWAY.value());
+        response.setField(exception.getField());
+        response.setValue(exception.getValue());
+        response.setEntity(exception.getEntity());
+        return response;
     }
 
 }

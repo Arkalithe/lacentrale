@@ -1,25 +1,23 @@
 package fr.humanbooster.lacentral.dto;
 
-import com.fasterxml.jackson.annotation.JsonView;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Past;
-import lombok.*;
-import fr.humanbooster.lacentral.jsonviews.UserJsonview;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
-
-
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Getter
-@Setter
-public class UserDto {
+public class UserRegisterDto {
 
     @NotBlank
     private String email;
+
+    @NotBlank
+    private String password;
 
     @NotBlank
     private String firstName;
@@ -30,6 +28,10 @@ public class UserDto {
     @NotBlank
     private String phone;
 
+
     @Past
     private LocalDate birthAt;
+
+    private LocalDate createdAt;
+
 }
